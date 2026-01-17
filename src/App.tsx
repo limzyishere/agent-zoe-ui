@@ -21,13 +21,13 @@ import {
   useDeleteContact,
 } from "./hooks/useContacts";
 
-const CATEGORIES = [
+const CATEGORIES: string[] = [
   "Landed Buyers",
   "New Launch Buyers",
   "Resale Buyers",
   "Existing Clients",
   "Potential Sellers",
-] as const;
+];
 
 export default function App() {
   const { logout } = useAuth();
