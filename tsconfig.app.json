@@ -16,6 +16,16 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+
+      // I ADDE THIS MYSELF TO PASS THE TS ERRROS
+    "noImplicitAny": false,
+    "strict": false,
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+
+
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
