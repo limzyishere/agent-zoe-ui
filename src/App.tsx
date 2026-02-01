@@ -1,18 +1,31 @@
-import { useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { Tabs, Tab } from "@mui/material";
+import { useEffect, useState } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import {
+  Box,
+  Paper,
+  Stack,
+  List,
+  ListItemButton,
+  Typography,
+  CircularProgress,
+} from "@mui/material";
 
 import LoginPage from "./auth/LoginPage";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import { useAuth } from "./auth/AuthContext";
 
+import AppShell from "./layout/AppShell";
+import CategoriesPage from "./categories/CategoriesPage";
 import ContactForm from "./contacts/ContactForm";
 import ContactList from "./contacts/ContactList";
 import MessageComposer from "./messaging/MessageComposer";
 import TemplateManager from "./messaging/TemplateManager";
-import AppShell from "./layout/AppShell";
 import JobsPage from "./jobs/JobsPage";
-
 
 import {
   useContacts,
@@ -21,31 +34,43 @@ import {
   useDeleteContact,
 } from "./hooks/useContacts";
 
-const CATEGORIES: string[] = [
-  "Landed Buyers",
-  "New Launch Buyers",
-  "Resale Buyers",
-  "Existing Clients",
-  "Potential Sellers",
-];
+import { useCategories } from "./hooks/useCategories";
 
 export default function App() {
   const { logout } = useAuth();
 
-  const [selectedCategory, setSelectedCategory] =
-    useState<(typeof CATEGORIES)[number]>(CATEGORIES[0]);
+  /* ---------------------------------
+   * Categories
+   * --------------------------------- */
+  const {
+    data: categories = [],
+    isLoading: categoriesLoading,
+  } = useCategories();
+
+  const [selectedCategoryId, setSelectedCategoryId] =
+    useState<number | null>(null);
+
+  // Auto-select first category once loaded
+  useEffect(() => {
+    if (
+      !selectedCategoryId &&
+      categories.length > 0
+    ) {
+      setSelectedCategoryId(categories[0].id);
+    }
+  }, [categories, selectedCategoryId]);
 
   /* ---------------------------------
-   * CONTACTS (TanStack Query)
-   * ---------------------------------*/
+   * Contacts
+   * --------------------------------- */
   const {
     data: contacts = [],
-    isLoading,
-  } = useContacts(selectedCategory);
+    isLoading: contactsLoading,
+  } = useContacts(selectedCategoryId);
 
-  const createContact = useCreateContact(selectedCategory);
-  const updateContact = useUpdateContact(selectedCategory);
-  const deleteContact = useDeleteContact(selectedCategory);
+  const createContact = useCreateContact();
+  const updateContact = useUpdateContact();
+  const deleteContact = useDeleteContact();
 
   return (
     <BrowserRouter>
@@ -59,55 +84,119 @@ export default function App() {
           element={
             <ProtectedRoute>
               <AppShell onLogout={logout}>
-                {/* Category tabs */}
-                <Tabs
-                  value={selectedCategory}
-                  onChange={(_, value) =>
-                    setSelectedCategory(value)
-                  }
-                  sx={{ mb: 2 }}
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  alignItems="stretch"
                 >
-                  {CATEGORIES.map((cat) => (
-                    <Tab
-                      key={cat}
-                      label={cat}
-                      value={cat}
-                    />
-                  ))}
-                </Tabs>
+                  {/* ---------- CATEGORY SIDEBAR ---------- */}
+                  <Paper
+                    sx={{
+                      width: 240,
+                      p: 1,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ px: 1, mb: 1 }}
+                    >
+                      Categories
+                    </Typography>
 
-                {/* Create */}
-                <ContactForm
-                  categories={CATEGORIES}
-                  onAdd={(data) =>
-                    createContact.mutate(data)
-                  }
-                />
+                    {categoriesLoading ? (
+                      <Box
+                        display="flex"
+                        justifyContent="center"
+                        py={2}
+                      >
+                        <CircularProgress size={20} />
+                      </Box>
+                    ) : (
+                      <List dense>
+                        {categories.map((cat) => (
+                          <ListItemButton
+                            key={cat.id}
+                            selected={
+                              cat.id ===
+                              selectedCategoryId
+                            }
+                            onClick={() =>
+                              setSelectedCategoryId(
+                                cat.id
+                              )
+                            }
+                          >
+                            {cat.name}
+                          </ListItemButton>
+                        ))}
+                      </List>
+                    )}
+                  </Paper>
 
-                {/* List */}
-                <ContactList
-                  contacts={contacts}
-                  category={selectedCategory}
-                  categories={CATEGORIES}
-                  loading={isLoading}
-                  onReassign={(id, cat) =>
-                    updateContact.mutate({
-                      id,
-                      data: { category: cat },
-                    })
-                  }
-                  onUpdate={(id, data) =>
-                    updateContact.mutate({ id, data })
-                  }
-                  onDelete={(id) =>
-                    deleteContact.mutate(id)
-                  }
-                />
+                  {/* ---------- MAIN CONTENT ---------- */}
+                  <Box flex={1}>
+                    {selectedCategoryId && (
+                      <>
+                        {/* Create Contact */}
+                        <ContactForm
+                          categories={categories}
+                          onAdd={(data) =>
+                            createContact.mutate(data)
+                          }
+                        />
 
+                        {/* Contact List */}
+                        <ContactList
+                          contacts={contacts}
+                          categoryId={
+                            selectedCategoryId
+                          }
+                          categories={categories}
+                          loading={contactsLoading}
+                          onReassign={(
+                            id,
+                            categoryId
+                          ) =>
+                            updateContact.mutate({
+                              id,
+                              data: {
+                                category_id:
+                                  categoryId,
+                              },
+                            })
+                          }
+                          onUpdate={(id, data) =>
+                            updateContact.mutate({
+                              id,
+                              data,
+                            })
+                          }
+                          onDelete={(id) =>
+                            deleteContact.mutate(id)
+                          }
+                        />
+                      </>
+                    )}
+                  </Box>
+                </Stack>
               </AppShell>
             </ProtectedRoute>
           }
         />
+
+
+      <Route
+        path="/categories"
+        element={
+          <ProtectedRoute>
+            <AppShell onLogout={logout}>
+              <CategoriesPage />
+            </AppShell>
+          </ProtectedRoute>
+        }
+      />
+
 
         {/* ---------- MESSAGES ---------- */}
         <Route
@@ -116,7 +205,7 @@ export default function App() {
             <ProtectedRoute>
               <AppShell onLogout={logout}>
                 <MessageComposer
-                  categories={CATEGORIES}
+                  categories={categories}
                 />
               </AppShell>
             </ProtectedRoute>
@@ -135,6 +224,7 @@ export default function App() {
           }
         />
 
+        {/* ---------- JOBS ---------- */}
         <Route
           path="/jobs"
           element={
@@ -146,13 +236,12 @@ export default function App() {
           }
         />
 
-
-
-
         {/* ---------- DEFAULT ---------- */}
         <Route
           path="*"
-          element={<Navigate to="/contacts" replace />}
+          element={
+            <Navigate to="/contacts" replace />
+          }
         />
       </Routes>
     </BrowserRouter>

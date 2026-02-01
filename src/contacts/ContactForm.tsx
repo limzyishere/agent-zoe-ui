@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   TextField,
   Button,
@@ -8,6 +8,9 @@ import {
   Box,
 } from "@mui/material";
 
+/* -----------------------------
+ * Country codes
+ * ----------------------------- */
 const COUNTRY_CODES = [
   { code: "+65", label: "Singapore", flag: "🇸🇬" },
   { code: "+60", label: "Malaysia", flag: "🇲🇾" },
@@ -25,48 +28,81 @@ const COUNTRY_CODES = [
   { code: "+61", label: "Australia", flag: "🇦🇺" },
 ];
 
+/* -----------------------------
+ * Types
+ * ----------------------------- */
+type Category = {
+  id: number;
+  name: string;
+};
+
 type Props = {
+  categories: Category[];
   onAdd: (data: {
     name: string;
     phone: string;
     email?: string;
-    category: string;
+    category_id: number;
   }) => void;
-  categories: string[];
 };
 
-export default function ContactForm({ onAdd, categories }: Props) {
+/* -----------------------------
+ * Component
+ * ----------------------------- */
+export default function ContactForm({
+  categories,
+  onAdd,
+}: Props) {
   const [form, setForm] = useState({
     name: "",
-    countryCode: "+65", // 🇸🇬 default
+    countryCode: "+65",
     phoneLocal: "",
     email: "",
-    propertyInterest: "",
-    category: categories[0],
+    category_id: 0,
   });
 
+  /* ---------------------------------
+   * Default category once loaded
+   * --------------------------------- */
+  useEffect(() => {
+    if (
+      form.category_id === 0 &&
+      categories.length > 0
+    ) {
+      setForm((f) => ({
+        ...f,
+        category_id: categories[0].id,
+      }));
+    }
+  }, [categories, form.category_id]);
+
+  /* ---------------------------------
+   * Submit
+   * --------------------------------- */
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
     const fullPhone = `${form.countryCode}${form.phoneLocal}`;
 
     onAdd({
-      name: form.name,
+      name: form.name.trim(),
       phone: fullPhone,
       email: form.email || undefined,
-      propertyInterest: form.propertyInterest || undefined,
-      category: form.category,
+      category_id: form.category_id,
     });
 
-    setForm({
-      ...form,
+    // Reset (keep category + country)
+    setForm((f) => ({
+      ...f,
       name: "",
       phoneLocal: "",
       email: "",
-      propertyInterest: "",
-    });
+    }));
   }
 
+  /* ---------------------------------
+   * Render
+   * --------------------------------- */
   return (
     <Paper sx={{ p: 2, mb: 3 }}>
       <form onSubmit={handleSubmit}>
@@ -77,11 +113,14 @@ export default function ContactForm({ onAdd, categories }: Props) {
             required
             value={form.name}
             onChange={(e) =>
-              setForm({ ...form, name: e.target.value })
+              setForm({
+                ...form,
+                name: e.target.value,
+              })
             }
           />
 
-          {/* Phone (flag + number, no labels) */}
+          {/* Phone */}
           <Box sx={{ display: "flex", gap: 1 }}>
             <TextField
               select
@@ -92,10 +131,13 @@ export default function ContactForm({ onAdd, categories }: Props) {
                   countryCode: e.target.value,
                 })
               }
-              sx={{ width: 110 }}
+              sx={{ width: 120 }}
             >
               {COUNTRY_CODES.map((c) => (
-                <MenuItem key={c.code} value={c.code}>
+                <MenuItem
+                  key={c.code}
+                  value={c.code}
+                >
                   {c.flag} {c.code}
                 </MenuItem>
               ))}
@@ -109,7 +151,10 @@ export default function ContactForm({ onAdd, categories }: Props) {
               onChange={(e) =>
                 setForm({
                   ...form,
-                  phoneLocal: e.target.value.replace(/\D/g, ""),
+                  phoneLocal: e.target.value.replace(
+                    /\D/g,
+                    ""
+                  ),
                 })
               }
             />
@@ -120,30 +165,46 @@ export default function ContactForm({ onAdd, categories }: Props) {
             placeholder="Email (optional)"
             value={form.email}
             onChange={(e) =>
-              setForm({ ...form, email: e.target.value })
+              setForm({
+                ...form,
+                email: e.target.value,
+              })
             }
           />
 
- 
+
+
           {/* Category */}
           <TextField
             select
-            value={form.category}
+            label="Category"
+            value={form.category_id}
             onChange={(e) =>
               setForm({
                 ...form,
-                category: e.target.value,
+                category_id: Number(
+                  e.target.value
+                ),
               })
             }
+            required
           >
             {categories.map((cat) => (
-              <MenuItem key={cat} value={cat}>
-                {cat}
+              <MenuItem
+                key={cat.id}
+                value={cat.id}
+              >
+                {cat.name}
               </MenuItem>
             ))}
           </TextField>
 
-          <Button variant="contained" type="submit">
+          {/* Submit */}
+          <Button
+            variant="contained"
+            type="submit"
+            disabled={!form.category_id}
+          >
             Add Contact
           </Button>
         </Stack>

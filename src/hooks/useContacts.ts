@@ -5,46 +5,54 @@ import {
 } from "@tanstack/react-query";
 import * as api from "../api/contacts";
 
-const key = (category: string) => ["contacts", category];
+const key = (categoryId: number | null) => [
+  "contacts",
+  categoryId,
+];
 
-export function useContacts(category: string) {
+export function useContacts(categoryId: number | null) {
   return useQuery({
-    queryKey: key(category),
-    queryFn: () => api.fetchContactsByCategory(category),
-    enabled: Boolean(category), // 🔒 auth-safe
+    queryKey: key(categoryId),
+    queryFn: () => api.fetchContactsByCategory(categoryId!),
+    enabled: Boolean(categoryId),
   });
 }
 
-export function useCreateContact(category: string) {
+export function useCreateContact() {
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: api.createContact,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: key(category) });
+      qc.invalidateQueries({ queryKey: ["contacts"] });
     },
   });
 }
 
-export function useUpdateContact(category: string) {
+export function useUpdateContact() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) =>
-      api.updateContact(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: any;
+    }) => api.updateContact(id, data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: key(category) });
+      qc.invalidateQueries({ queryKey: ["contacts"] });
     },
   });
 }
 
-export function useDeleteContact(category: string) {
+export function useDeleteContact() {
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: api.deleteContact,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: key(category) });
+      qc.invalidateQueries({ queryKey: ["contacts"] });
     },
   });
 }

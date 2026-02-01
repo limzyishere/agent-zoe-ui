@@ -13,29 +13,58 @@ import {
 import { fetchTemplates } from "../api/templates";
 import type { Template } from "../api/templates";
 import { createJob } from "../api/jobs";
-import { fetchContactsByCategory } from "../api/contacts";
-
-type Contact = {
+import {
+  fetchContactsByCategory,
+} from "../api/contacts";
+import type { Contact } from "../api/contacts";
+/* -----------------------------
+ * Types
+ * ----------------------------- */
+type Category = {
   id: number;
   name: string;
-  phone: string;
-  email?: string | null;
-  category: string;
 };
 
 type Props = {
-  categories: string[];
+  categories: Category[];
 };
 
-export default function MessageComposer({ categories }: Props) {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  const [templateId, setTemplateId] = useState<number | "">("");
+/* -----------------------------
+ * Component
+ * ----------------------------- */
+export default function MessageComposer({
+  categories,
+}: Props) {
+  const [templates, setTemplates] = useState<
+    Template[]
+  >([]);
+  const [templateId, setTemplateId] = useState<
+    number | ""
+  >("");
   const [message, setMessage] = useState("");
 
-  const [category, setCategory] = useState(categories[0]);
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [
+    selectedCategoryId,
+    setSelectedCategoryId,
+  ] = useState<number | null>(null);
+
+  const [contacts, setContacts] = useState<
+    Contact[]
+  >([]);
 
   const [sending, setSending] = useState(false);
+
+  /* -----------------------------------------
+   * Default category
+   * ---------------------------------------*/
+  useEffect(() => {
+    if (
+      !selectedCategoryId &&
+      categories.length > 0
+    ) {
+      setSelectedCategoryId(categories[0].id);
+    }
+  }, [categories, selectedCategoryId]);
 
   /* -----------------------------------------
    * Load templates once
@@ -48,14 +77,20 @@ export default function MessageComposer({ categories }: Props) {
    * Load contacts when category changes
    * ---------------------------------------*/
   useEffect(() => {
-    fetchContactsByCategory(category).then(setContacts);
-  }, [category]);
+    if (!selectedCategoryId) return;
+
+    fetchContactsByCategory(
+      selectedCategoryId
+    ).then(setContacts);
+  }, [selectedCategoryId]);
 
   /* -----------------------------------------
    * Apply template content
    * ---------------------------------------*/
   function applyTemplate(id: number) {
-    const t = templates.find((x) => x.id === id);
+    const t = templates.find(
+      (x) => x.id === id
+    );
     if (t) {
       setMessage(t.content);
     }
@@ -65,17 +100,25 @@ export default function MessageComposer({ categories }: Props) {
    * Send → create PropertyJob
    * ---------------------------------------*/
   async function send() {
-    if (!message || contacts.length === 0) return;
+    if (
+      !message ||
+      contacts.length === 0
+    )
+      return;
 
     setSending(true);
 
     try {
       await createJob({
         message,
-        contact_ids: contacts.map((c) => c.id),
+        contact_ids: contacts.map(
+          (c) => c.id
+        ),
       });
 
-      alert(`Job created for ${contacts.length} contacts`);
+      alert(
+        `Job created for ${contacts.length} contacts`
+      );
       setMessage("");
       setTemplateId("");
     } finally {
@@ -83,6 +126,9 @@ export default function MessageComposer({ categories }: Props) {
     }
   }
 
+  /* -----------------------------------------
+   * Render
+   * ---------------------------------------*/
   return (
     <Paper sx={{ p: 3 }}>
       <Stack spacing={3}>
@@ -90,21 +136,34 @@ export default function MessageComposer({ categories }: Props) {
           Message Composer
         </Typography>
 
-        {/* Recipient category */}
+        {/* Category selector */}
         <TextField
           select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
+          label="Recipient Category"
+          value={selectedCategoryId ?? ""}
+          onChange={(e) =>
+            setSelectedCategoryId(
+              Number(e.target.value)
+            )
+          }
+          required
         >
           {categories.map((c) => (
-            <MenuItem key={c} value={c}>
-              {c}
+            <MenuItem
+              key={c.id}
+              value={c.id}
+            >
+              {c.name}
             </MenuItem>
           ))}
         </TextField>
 
-        <Typography variant="body2" color="text.secondary">
-          {contacts.length} recipients in this category
+        <Typography
+          variant="body2"
+          color="text.secondary"
+        >
+          {contacts.length} recipients in this
+          category
         </Typography>
 
         <Divider />
@@ -112,9 +171,12 @@ export default function MessageComposer({ categories }: Props) {
         {/* Template selector */}
         <TextField
           select
+          label="Message Template"
           value={templateId}
           onChange={(e) => {
-            const id = Number(e.target.value);
+            const id = Number(
+              e.target.value
+            );
             setTemplateId(id);
             applyTemplate(id);
           }}
@@ -125,7 +187,10 @@ export default function MessageComposer({ categories }: Props) {
           </MenuItem>
 
           {templates.map((t) => (
-            <MenuItem key={t.id} value={t.id}>
+            <MenuItem
+              key={t.id}
+              value={t.id}
+            >
               {t.name}
             </MenuItem>
           ))}
@@ -137,10 +202,15 @@ export default function MessageComposer({ categories }: Props) {
           minRows={6}
           placeholder="Write your message..."
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={(e) =>
+            setMessage(e.target.value)
+          }
         />
 
-        <Typography variant="caption" color="text.secondary">
+        <Typography
+          variant="caption"
+          color="text.secondary"
+        >
           {message.length} characters
         </Typography>
 
@@ -152,14 +222,19 @@ export default function MessageComposer({ categories }: Props) {
             Preview recipients
           </Typography>
 
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
             {contacts.length === 0
               ? "No contacts in this category"
               : contacts
                   .slice(0, 5)
                   .map((c) => c.name)
                   .join(", ") +
-                (contacts.length > 5 ? "…" : "")}
+                (contacts.length > 5
+                  ? "…"
+                  : "")}
           </Typography>
         </Box>
 
@@ -167,15 +242,17 @@ export default function MessageComposer({ categories }: Props) {
         <Button
           variant="contained"
           disabled={
-            sending || !message || contacts.length === 0
+            sending ||
+            !message ||
+            contacts.length === 0
           }
           onClick={send}
         >
-          {sending ? "Sending…" : "Send Message"}
+          {sending
+            ? "Sending…"
+            : "Send Message"}
         </Button>
       </Stack>
     </Paper>
   );
 }
-
-

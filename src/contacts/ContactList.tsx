@@ -12,29 +12,36 @@ import {
   MenuItem,
   IconButton,
   Typography,
-  Tooltip,
   Stack,
 } from "@mui/material";
+
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
 import CloseIcon from "@mui/icons-material/Close";
+
+/* -----------------------------
+ * Types
+ * ----------------------------- */
+type Category = {
+  id: number;
+  name: string;
+};
 
 type Contact = {
   id: number;
   name: string;
   phone: string;
   email?: string | null;
-  propertyInterest?: string | null;
-  category: string;
+  category_id: number;
 };
 
 type Props = {
   contacts: Contact[];
-  category: string;
-  categories: string[];
+  categoryId: number;
+  categories: Category[];
   loading?: boolean;
-  onReassign: (id: number, category: string) => void;
+  onReassign: (id: number, categoryId: number) => void;
   onUpdate: (
     id: number,
     data: Partial<Omit<Contact, "id">>
@@ -42,13 +49,19 @@ type Props = {
   onDelete: (id: number) => void;
 };
 
+/* -----------------------------
+ * Helpers
+ * ----------------------------- */
 function isValidPhone(phone: string) {
   return /^\+\d{8,15}$/.test(phone);
 }
 
+/* -----------------------------
+ * Component
+ * ----------------------------- */
 export default function ContactList({
   contacts,
-  category,
+  categoryId,
   categories,
   loading,
   onReassign,
@@ -56,26 +69,28 @@ export default function ContactList({
   onDelete,
 }: Props) {
   const [query, setQuery] = useState("");
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] =
+    useState<number | null>(null);
   const [draft, setDraft] =
     useState<Partial<Contact>>({});
 
-  const filtered = contacts
-    .filter((c) => c.category === category)
-    .filter((c) => {
-      const q = query.toLowerCase();
-      return (
-        c.name.toLowerCase().includes(q) ||
-        c.phone.includes(query) ||
-        (c.email?.toLowerCase().includes(q) ??
-          false) ||
-        (c.propertyInterest
-          ?.toLowerCase()
-          .includes(q) ??
-          false)
-      );
-    });
+  /* ---------------------------------
+   * Search filter ONLY
+   * (Backend already filters by category)
+   * --------------------------------- */
+  const filtered = contacts.filter((c) => {
+    const q = query.toLowerCase();
+    return (
+      c.name.toLowerCase().includes(q) ||
+      c.phone.includes(query) ||
+      (c.email?.toLowerCase().includes(q) ??
+        false)
+    );
+  });
 
+  /* ---------------------------------
+   * Edit helpers
+   * --------------------------------- */
   function startEdit(c: Contact) {
     setEditingId(c.id);
     setDraft({ ...c });
@@ -101,7 +116,6 @@ export default function ContactList({
       name: draft.name,
       phone: draft.phone,
       email: draft.email,
-      propertyInterest: draft.propertyInterest,
     });
 
     cancelEdit();
@@ -116,8 +130,12 @@ export default function ContactList({
     onDelete(id);
   }
 
+  /* ---------------------------------
+   * Render
+   * --------------------------------- */
   return (
     <Box sx={{ width: "100%" }}>
+      {/* Search */}
       <TextField
         placeholder="Search contacts"
         fullWidth
@@ -135,7 +153,6 @@ export default function ContactList({
               <TableCell>Name</TableCell>
               <TableCell>Phone</TableCell>
               <TableCell>Email</TableCell>
-              <TableCell>Property Interest</TableCell>
               <TableCell>Category</TableCell>
               <TableCell
                 align="center"
@@ -147,10 +164,11 @@ export default function ContactList({
           </TableHead>
 
           <TableBody>
+            {/* Loading */}
             {loading && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={5}
                   align="center"
                 >
                   Loading…
@@ -158,12 +176,14 @@ export default function ContactList({
               </TableRow>
             )}
 
+            {/* Rows */}
             {filtered.map((c) => {
               const isEditing =
                 editingId === c.id;
 
               return (
                 <TableRow key={c.id} hover>
+                  {/* Name */}
                   <TableCell>
                     {isEditing ? (
                       <TextField
@@ -181,6 +201,7 @@ export default function ContactList({
                     )}
                   </TableCell>
 
+                  {/* Phone */}
                   <TableCell>
                     {isEditing ? (
                       <TextField
@@ -213,6 +234,7 @@ export default function ContactList({
                     )}
                   </TableCell>
 
+                  {/* Email */}
                   <TableCell>
                     {isEditing ? (
                       <TextField
@@ -230,49 +252,30 @@ export default function ContactList({
                     )}
                   </TableCell>
 
-                  <TableCell>
-                    {isEditing ? (
-                      <TextField
-                        size="small"
-                        value={
-                          draft.propertyInterest ||
-                          ""
-                        }
-                        onChange={(e) =>
-                          setDraft({
-                            ...draft,
-                            propertyInterest:
-                              e.target.value,
-                          })
-                        }
-                      />
-                    ) : (
-                      c.propertyInterest || "—"
-                    )}
-                  </TableCell>
-
+                  {/* Category (ID-based, SAFE) */}
                   <TableCell>
                     <Select
                       size="small"
-                      value={c.category}
+                      value={c.category_id}
                       onChange={(e) =>
                         onReassign(
                           c.id,
-                          e.target.value
+                          Number(e.target.value)
                         )
                       }
                     >
                       {categories.map((cat) => (
                         <MenuItem
-                          key={cat}
-                          value={cat}
+                          key={cat.id}
+                          value={cat.id}
                         >
-                          {cat}
+                          {cat.name}
                         </MenuItem>
                       ))}
                     </Select>
                   </TableCell>
 
+                  {/* Actions */}
                   <TableCell align="center">
                     {isEditing ? (
                       <Stack
@@ -324,6 +327,18 @@ export default function ContactList({
                 </TableRow>
               );
             })}
+
+            {/* Empty */}
+            {!loading && filtered.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={5}
+                  align="center"
+                >
+                  No contacts found
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </Paper>

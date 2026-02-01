@@ -1,19 +1,36 @@
 import { apiFetch } from "./apiFetch";
 
+export type Category = {
+  id: number;
+  name: string;
+};
+
 export type Contact = {
   id: number;
   name: string;
   phone: string;
   email?: string | null;
-  category: string;
+  propertyInterest?: string | null;
+  category: Category;
 };
 
-export function fetchContactsByCategory(category: string): Promise<Contact[]> {
-  const params = new URLSearchParams({ category });
-  return apiFetch(`/property/v1/contacts?${params.toString()}`);
+export function fetchContactsByCategory(
+  categoryId: number
+): Promise<Contact[]> {
+  const params = new URLSearchParams({
+    category_id: String(categoryId),
+  });
+
+  return apiFetch(`/property/v1/contacts?${params}`);
 }
 
-export function createContact(data: Omit<Contact, "id">): Promise<Contact> {
+export function createContact(data: {
+  name: string;
+  phone: string;
+  email?: string;
+  propertyInterest?: string;
+  category_id: number;
+}): Promise<Contact> {
   return apiFetch("/property/v1/contact", {
     method: "POST",
     body: JSON.stringify(data),
@@ -22,7 +39,13 @@ export function createContact(data: Omit<Contact, "id">): Promise<Contact> {
 
 export function updateContact(
   id: number,
-  data: Partial<Omit<Contact, "id">>
+  data: Partial<{
+    name: string;
+    phone: string;
+    email?: string;
+    propertyInterest?: string;
+    category_id: number;
+  }>
 ): Promise<Contact> {
   return apiFetch(`/property/v1/contact/${id}`, {
     method: "PUT",

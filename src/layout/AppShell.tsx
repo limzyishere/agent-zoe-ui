@@ -15,6 +15,12 @@ export default function AppShell({
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Property CRM
           </Typography>
+          
+          
+          <Button color="inherit" component={Link} to="/categories">
+            Categories
+          </Button>
+
 
           <Button color="inherit" component={Link} to="/contacts">
             Contacts
